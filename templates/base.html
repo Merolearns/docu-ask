@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>docu-ask</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <nav>
+    <a href="{{ url_for('ask_page') }}" class="brand">docu-ask</a>
+    <span class="spacer"></span>
+    <a href="{{ url_for('documents') }}">Documents</a>
+    <a href="{{ url_for('upload') }}">Upload</a>
+  </nav>
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+  <footer>Answers come from your documents — always check the sources.</footer>
+</body>
+</html>

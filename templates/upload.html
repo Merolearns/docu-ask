@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Upload a document</h1>
+<p class="hint">Plain text or Markdown (.txt / .md), up to 5 MB. It gets indexed immediately.</p>
+{% if msg %}<p class="error">{{ msg }}</p>{% endif %}
+<form method="post" enctype="multipart/form-data" class="upload-form">
+  <input type="file" name="file" accept=".txt,.md">
+  <button type="submit">Upload &amp; index</button>
+</form>
+{% endblock %}

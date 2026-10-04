@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Ask your documents</h1>
+<form method="post" class="ask-form">
+  <input type="text" name="question" placeholder="e.g. how do I reset the widget?"
+         value="{{ question }}" autofocus>
+  <button type="submit">Ask</button>
+</form>
+
+{% if answer %}
+<section class="answer">
+  <div class="answer-meta">
+    {% if used_llm %}
+      <span class="badge llm">answered with Gemini</span>
+    {% else %}
+      <span class="badge fallback">extracted passages (no LLM configured)</span>
+    {% endif %}
+  </div>
+  <pre>{{ answer }}</pre>
+</section>
+
+<section class="sources">
+  <h2>Sources</h2>
+  {% for h in hits %}
+  <div class="source-card">
+    <div class="source-head">
+      <strong>{{ h.doc_name }}</strong>
+      <span>chunk {{ h.chunk_id }}</span>
+      <span class="score">score {{ "%.3f"|format(h.score) }}</span>
+    </div>
+    <p>{{ h.text[:400] }}{% if h.text|length > 400 %}...{% endif %}</p>
+  </div>
+  {% endfor %}
+</section>
+{% endif %}
+{% endblock %}
