@@ -81,6 +81,12 @@ def test_retrieve_empty_index():
     assert idx.retrieve("anything") == []
 
 
+def test_retrieve_nonpositive_k_returns_nothing(index):
+    # k=0 or negative must not slice backwards into almost-all hits
+    assert index.retrieve("factory reset widget", k=0) == []
+    assert index.retrieve("factory reset widget", k=-1) == []
+
+
 def test_extractive_answer_quotes_chunks(index):
     hits = index.retrieve("factory reset widget", k=2)
     text = extractive_answer("how do I reset it?", hits)

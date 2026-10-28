@@ -94,7 +94,13 @@ def api_ask():
     question = str(data.get("question", "")).strip()
     if not question:
         return jsonify({"error": "question is required"}), 400
-    hits = index.retrieve(question, k=int(data.get("k", 5)))
+    try:
+        k = int(data.get("k", 5))
+    except (TypeError, ValueError):
+        return jsonify({"error": "k must be an integer"}), 400
+    if k < 1:
+        return jsonify({"error": "k must be at least 1"}), 400
+    hits = index.retrieve(question, k=k)
     answer, used_llm = answer_question(question, hits)
     return jsonify({
         "answer": answer,

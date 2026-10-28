@@ -84,8 +84,12 @@ class RAGIndex:
         """Top-k chunks for query, highest cosine score first.
 
         Each hit: {doc_name, chunk_id, text, score}. Zero-score hits dropped.
+        A non-positive k returns no hits instead of slicing backwards
+        (argsort()[::-1][:-1] would silently return almost everything).
         """
         if not self.chunks or self.vectorizer is None:
+            return []
+        if k <= 0:
             return []
         q_vec = self.vectorizer.transform([query])
         scores = cosine_similarity(q_vec, self.matrix)[0]
