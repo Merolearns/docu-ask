@@ -73,10 +73,16 @@ def upload():
             if ext not in ALLOWED_EXTS:
                 msg = "Only .txt and .md files."
             else:
-                os.makedirs(DOCS_DIR, exist_ok=True)
-                f.save(os.path.join(DOCS_DIR, secure_filename(f.filename)))
-                rebuild_index()  # new doc -> fresh index
-                return redirect(url_for("documents"))
+                name = secure_filename(f.filename)
+                if os.path.splitext(name)[1].lower() != ext:
+                    # secure_filename strips non-ascii, so "日本語.md" would
+                    # land as a bare "md" that load_documents skips silently
+                    msg = "Rename the file using plain letters and numbers first."
+                else:
+                    os.makedirs(DOCS_DIR, exist_ok=True)
+                    f.save(os.path.join(DOCS_DIR, name))
+                    rebuild_index()  # new doc -> fresh index
+                    return redirect(url_for("documents"))
     return render_template("upload.html", msg=msg)
 
 
