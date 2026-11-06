@@ -42,6 +42,20 @@ def test_upload_rejects_fully_non_ascii_name(client, tmp_path):
     assert os.listdir(str(tmp_path)) == []
 
 
+def test_upload_rejects_empty_file(client, tmp_path):
+    resp = _upload(client, "empty.md", data=b"")
+    assert resp.status_code == 200
+    assert b"That file is empty." in resp.data
+    assert os.listdir(str(tmp_path)) == []
+
+
+def test_upload_rejects_whitespace_only_file(client, tmp_path):
+    resp = _upload(client, "blank.txt", data=b"  \n\n  ")
+    assert resp.status_code == 200
+    assert b"That file is empty." in resp.data
+    assert os.listdir(str(tmp_path)) == []
+
+
 def test_upload_rejects_bad_extension(client, tmp_path):
     resp = _upload(client, "photo.png")
     assert resp.status_code == 200

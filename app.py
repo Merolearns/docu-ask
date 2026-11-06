@@ -79,10 +79,17 @@ def upload():
                     # land as a bare "md" that load_documents skips silently
                     msg = "Rename the file using plain letters and numbers first."
                 else:
-                    os.makedirs(DOCS_DIR, exist_ok=True)
-                    f.save(os.path.join(DOCS_DIR, name))
-                    rebuild_index()  # new doc -> fresh index
-                    return redirect(url_for("documents"))
+                    content = f.read()
+                    if not content.strip():
+                        # an empty (or whitespace-only) file indexes zero
+                        # chunks and shows up as a 0-word doc - refuse it
+                        msg = "That file is empty."
+                    else:
+                        os.makedirs(DOCS_DIR, exist_ok=True)
+                        with open(os.path.join(DOCS_DIR, name), "wb") as out:
+                            out.write(content)
+                        rebuild_index()  # new doc -> fresh index
+                        return redirect(url_for("documents"))
     return render_template("upload.html", msg=msg)
 
 
