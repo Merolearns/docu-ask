@@ -85,11 +85,18 @@ def upload():
                         # chunks and shows up as a 0-word doc - refuse it
                         msg = "That file is empty."
                     else:
-                        os.makedirs(DOCS_DIR, exist_ok=True)
-                        with open(os.path.join(DOCS_DIR, name), "wb") as out:
-                            out.write(content)
-                        rebuild_index()  # new doc -> fresh index
-                        return redirect(url_for("documents"))
+                        try:
+                            content.decode("utf-8")
+                        except UnicodeDecodeError:
+                            # load_documents skips undecodable files, so it
+                            # would never show up or be searchable - refuse it
+                            msg = "That file isn't plain UTF-8 text."
+                        else:
+                            os.makedirs(DOCS_DIR, exist_ok=True)
+                            with open(os.path.join(DOCS_DIR, name), "wb") as out:
+                                out.write(content)
+                            rebuild_index()  # new doc -> fresh index
+                            return redirect(url_for("documents"))
     return render_template("upload.html", msg=msg)
 
 

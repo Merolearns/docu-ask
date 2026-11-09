@@ -61,3 +61,18 @@ def test_upload_rejects_bad_extension(client, tmp_path):
     assert resp.status_code == 200
     assert b"Only .txt and .md files." in resp.data
     assert os.listdir(str(tmp_path)) == []
+
+
+def test_upload_rejects_non_utf8_file(client, tmp_path):
+    # load_documents skips undecodable files, so saving this would lose it silently
+    resp = _upload(client, "latin1.txt", data=b"caf\xe9 \x96\x99")
+    assert resp.status_code == 200
+    # the template autoescapes the apostrophe
+    assert b"That file isn&#39;t plain UTF-8 text." in resp.data
+    assert os.listdir(str(tmp_path)) == []
+
+
+def test_upload_accepts_non_ascii_utf8(client, tmp_path):
+    resp = _upload(client, "cafe.txt", data="café".encode("utf-8"))
+    assert resp.status_code == 302
+    assert os.path.isfile(os.path.join(str(tmp_path), "cafe.txt"))
