@@ -76,3 +76,32 @@ def test_upload_accepts_non_ascii_utf8(client, tmp_path):
     resp = _upload(client, "cafe.txt", data="café".encode("utf-8"))
     assert resp.status_code == 302
     assert os.path.isfile(os.path.join(str(tmp_path), "cafe.txt"))
+
+
+def test_delete_removes_document(client, tmp_path):
+    _upload(client, "notes.md", data=b"some doc text")
+    assert os.path.isfile(os.path.join(str(tmp_path), "notes.md"))
+    resp = client.post("/documents/notes.md/delete")
+    assert resp.status_code == 302
+    assert not os.path.exists(os.path.join(str(tmp_path), "notes.md"))
+    assert b"notes.md" not in client.get("/documents").data
+
+
+def test_delete_missing_document_returns_404(client, tmp_path):
+    resp = client.post("/documents/nope.md/delete")
+    assert resp.status_code == 404
+    assert os.listdir(str(tmp_path)) == []
+
+
+def test_delete_rejects_non_document_extension(client, tmp_path):
+    # app.py lives next to docs/, not in it - never deletable via this route
+    resp = client.post("/documents/app.py/delete")
+    assert resp.status_code == 404
+    assert os.listdir(str(tmp_path)) == []
+
+
+def test_deleted_document_stops_answering(client):
+    _upload(client, "notes.md", data=b"the quokka codeword is wombat")
+    assert b"wombat" in client.post("/", data={"question": "quokka codeword"}).data
+    client.post("/documents/notes.md/delete")
+    assert b"wombat" not in client.post("/", data={"question": "quokka codeword"}).data

@@ -63,6 +63,14 @@ button {
   cursor: pointer;
 }
 button:hover { opacity: 0.9; }
+button.delete {
+  padding: 0.35rem 0.8rem;
+  font-size: 0.9rem;
+  background: #fff;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+button.delete:hover { background: #fef2f2; }
 
 .answer {
   background: var(--card);

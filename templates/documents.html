@@ -3,9 +3,10 @@
 <h1>Documents</h1>
 {% if docs %}
 <table>
-  <tr><th>File</th><th>Words</th></tr>
+  <tr><th>File</th><th>Words</th><th></th></tr>
   {% for d in docs %}
-  <tr><td>{{ d.name }}</td><td>{{ d.words }}</td></tr>
+  <tr><td>{{ d.name }}</td><td>{{ d.words }}</td>
+  <td><form method="post" action="{{ url_for('delete_document', name=d.name) }}" onsubmit="return confirm('Delete {{ d.name }}?');"><button type="submit" class="delete">Delete</button></form></td></tr>
   {% endfor %}
 </table>
 {% else %}

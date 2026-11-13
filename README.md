@@ -42,7 +42,9 @@ Uploaded files land in `docs/` and are indexed immediately. On first run the
 three sample docs are copied into `docs/` automatically so the web UI works
 right away. The files in `sample_docs/` are fictional (a product manual, a
 remote-work policy, a travel guide) — just there so you can try it without
-uploading anything.
+uploading anything. A document can be removed from the Documents page
+(Delete button) — the file is deleted and the index rebuilds, so it stops
+answering questions.
 
 Enable the LLM path:
 

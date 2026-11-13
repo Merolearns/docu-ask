@@ -107,6 +107,22 @@ def documents():
     return render_template("documents.html", docs=info)
 
 
+@app.route("/documents/<name>/delete", methods=["POST"])
+def delete_document(name):
+    # only a real indexed doc can be deleted - the name must survive
+    # secure_filename unchanged and keep a .txt/.md extension, so a
+    # crafted name can never reach anything outside docs/
+    safe = secure_filename(name)
+    if safe != name or os.path.splitext(safe)[1].lower() not in ALLOWED_EXTS:
+        return "No such document.", 404
+    path = os.path.join(DOCS_DIR, safe)
+    if not os.path.isfile(path):
+        return "No such document.", 404
+    os.remove(path)
+    rebuild_index()  # a deleted doc must stop answering questions
+    return redirect(url_for("documents"))
+
+
 @app.route("/api/ask", methods=["POST"])
 def api_ask():
     """JSON API: POST {"question": "...", "k": 5} -> answer + sources."""
