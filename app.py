@@ -100,6 +100,14 @@ def upload():
     return render_template("upload.html", msg=msg)
 
 
+@app.errorhandler(413)
+def too_large(_err):
+    # Flask's bare 413 page says nothing useful - send the user back
+    # to the upload form with a plain-English explanation instead
+    msg = "That file is over the 5 MB limit. Split it into smaller files."
+    return render_template("upload.html", msg=msg), 413
+
+
 @app.route("/documents")
 def documents():
     docs = load_documents(DOCS_DIR)

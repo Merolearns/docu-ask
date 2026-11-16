@@ -72,6 +72,15 @@ def test_upload_rejects_non_utf8_file(client, tmp_path):
     assert os.listdir(str(tmp_path)) == []
 
 
+def test_upload_over_size_limit_shows_message(client, tmp_path, monkeypatch):
+    # shrink the 5 MB cap so the test doesn't need a real 5 MB file
+    monkeypatch.setitem(app_module.app.config, "MAX_CONTENT_LENGTH", 100)
+    resp = _upload(client, "big.txt", data=b"x" * 200)
+    assert resp.status_code == 413
+    assert b"over the 5 MB limit" in resp.data
+    assert os.listdir(str(tmp_path)) == []
+
+
 def test_upload_accepts_non_ascii_utf8(client, tmp_path):
     resp = _upload(client, "cafe.txt", data="café".encode("utf-8"))
     assert resp.status_code == 302
