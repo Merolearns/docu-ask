@@ -135,6 +135,10 @@ def delete_document(name):
 def api_ask():
     """JSON API: POST {"question": "...", "k": 5} -> answer + sources."""
     data = request.get_json(force=True, silent=True) or {}
+    if not isinstance(data, dict):
+        # a valid JSON body that isn't an object ("[1, 2]", '"hi"', "42")
+        # has no .get - say so plainly instead of 500ing
+        return jsonify({"error": "expected a JSON object"}), 400
     question = str(data.get("question", "")).strip()
     if not question:
         return jsonify({"error": "question is required"}), 400

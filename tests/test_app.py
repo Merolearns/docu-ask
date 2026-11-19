@@ -114,3 +114,22 @@ def test_deleted_document_stops_answering(client):
     assert b"wombat" in client.post("/", data={"question": "quokka codeword"}).data
     client.post("/documents/notes.md/delete")
     assert b"wombat" not in client.post("/", data={"question": "quokka codeword"}).data
+
+
+def test_api_ask_rejects_non_object_json(client):
+    # a JSON list, string or number parses fine but has no .get -
+    # it used to 500 with AttributeError instead of a plain 400
+    for body in (b"[1, 2]", b'"just a string"', b"42"):
+        resp = client.post(
+            "/api/ask", data=body, content_type="application/json"
+        )
+        assert resp.status_code == 400
+        assert resp.get_json() == {"error": "expected a JSON object"}
+
+
+def test_api_ask_answers_valid_question(client):
+    resp = client.post("/api/ask", json={"question": "hello", "k": 1})
+    assert resp.status_code == 200
+    body = resp.get_json()
+    assert "answer" in body and "sources" in body
+    assert body["used_llm"] is False  # no Gemini key in tests
