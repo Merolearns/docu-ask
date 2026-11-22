@@ -92,11 +92,19 @@ def upload():
                             # would never show up or be searchable - refuse it
                             msg = "That file isn't plain UTF-8 text."
                         else:
-                            os.makedirs(DOCS_DIR, exist_ok=True)
-                            with open(os.path.join(DOCS_DIR, name), "wb") as out:
-                                out.write(content)
-                            rebuild_index()  # new doc -> fresh index
-                            return redirect(url_for("documents"))
+                            dest = os.path.join(DOCS_DIR, name)
+                            if os.path.exists(dest):
+                                # re-uploading the same name would silently
+                                # replace the existing document - refuse it
+                                # and let the user delete or rename first
+                                msg = ("A document with that name already exists. "
+                                       "Delete it first, or rename the file.")
+                            else:
+                                os.makedirs(DOCS_DIR, exist_ok=True)
+                                with open(dest, "wb") as out:
+                                    out.write(content)
+                                rebuild_index()  # new doc -> fresh index
+                                return redirect(url_for("documents"))
     return render_template("upload.html", msg=msg)
 
 

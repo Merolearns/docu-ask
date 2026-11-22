@@ -63,6 +63,16 @@ def test_upload_rejects_bad_extension(client, tmp_path):
     assert os.listdir(str(tmp_path)) == []
 
 
+def test_upload_rejects_duplicate_name(client, tmp_path):
+    _upload(client, "notes.md", data=b"first version")
+    assert os.path.isfile(os.path.join(str(tmp_path), "notes.md"))
+    resp = _upload(client, "notes.md", data=b"second version")
+    assert resp.status_code == 200
+    assert b"already exists" in resp.data
+    # the original file is untouched
+    assert open(os.path.join(str(tmp_path), "notes.md"), "rb").read() == b"first version"
+
+
 def test_upload_rejects_non_utf8_file(client, tmp_path):
     # load_documents skips undecodable files, so saving this would lose it silently
     resp = _upload(client, "latin1.txt", data=b"caf\xe9 \x96\x99")

@@ -38,7 +38,10 @@ python app.py
 # open http://127.0.0.1:5000
 ```
 
-Uploaded files land in `docs/` and are indexed immediately. On first run the
+Uploaded files land in `docs/` and are indexed immediately. Uploading a file
+whose name is already taken is refused — delete the existing document first,
+or rename the file — so an upload can never silently replace another document.
+On first run the
 three sample docs are copied into `docs/` automatically so the web UI works
 right away. The files in `sample_docs/` are fictional (a product manual, a
 remote-work policy, a travel guide) — just there so you can try it without
