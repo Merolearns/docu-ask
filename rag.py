@@ -78,7 +78,14 @@ class RAGIndex:
             return
         # max_features keeps the matrix small on bigger doc sets
         self.vectorizer = TfidfVectorizer(stop_words="english", max_features=20000)
-        self.matrix = self.vectorizer.fit_transform(c["text"] for c in self.chunks)
+        try:
+            self.matrix = self.vectorizer.fit_transform(c["text"] for c in self.chunks)
+        except ValueError:
+            # every chunk is stop words only ("the and of the") - the
+            # vectorizer has no vocabulary to build. An empty index
+            # instead of a crash: the app still boots and uploads stop
+            # 500ing, and the doc simply never matches a query.
+            self.vectorizer, self.matrix = None, None
 
     def retrieve(self, query, k=5):
         """Top-k chunks for query, highest cosine score first.

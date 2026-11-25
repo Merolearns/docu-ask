@@ -143,3 +143,13 @@ def test_api_ask_answers_valid_question(client):
     body = resp.get_json()
     assert "answer" in body and "sources" in body
     assert body["used_llm"] is False  # no Gemini key in tests
+
+
+def test_upload_stop_words_only_file_does_not_500(client, tmp_path):
+    # a doc of nothing but stop words used to crash the index rebuild
+    # with "empty vocabulary" - the upload 500ed, and the app would not
+    # restart while the file sat in docs/
+    resp = _upload(client, "stop.txt", data=b"the and of the")
+    assert resp.status_code == 302
+    assert os.path.isfile(os.path.join(str(tmp_path), "stop.txt"))
+    assert client.post("/", data={"question": "the"}).status_code == 200

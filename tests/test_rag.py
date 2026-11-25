@@ -81,6 +81,27 @@ def test_retrieve_empty_index():
     assert idx.retrieve("anything") == []
 
 
+def test_build_stop_words_only_doc_is_empty_index_not_crash():
+    # a doc of nothing but English stop words used to crash the build
+    # with "empty vocabulary", taking the app down on boot and 500ing
+    # the upload that added it
+    idx = RAGIndex()
+    idx.build([("stop.txt", "the and of the")])
+    assert idx.retrieve("the") == []
+
+
+def test_build_stop_words_only_doc_does_not_poison_other_docs():
+    # the stop-words doc contributes no vocabulary, the good doc still
+    # answers - the empty-vocabulary guard must not swallow real docs
+    idx = RAGIndex()
+    idx.build([
+        ("good.md", "the widget factory reset button is behind the battery cover"),
+        ("stop.txt", "the and of the"),
+    ])
+    hits = idx.retrieve("factory reset widget", k=3)
+    assert hits and hits[0]["doc_name"] == "good.md"
+
+
 def test_retrieve_nonpositive_k_returns_nothing(index):
     # k=0 or negative must not slice backwards into almost-all hits
     assert index.retrieve("factory reset widget", k=0) == []
