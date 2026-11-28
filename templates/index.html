@@ -1,11 +1,21 @@
 {% extends "base.html" %}
 {% block content %}
 <h1>Ask your documents</h1>
-<form method="post" class="ask-form">
+<form method="post" class="ask-form" id="ask-form">
   <input type="text" name="question" placeholder="e.g. how do I reset the widget?"
          value="{{ question }}" autofocus>
-  <button type="submit">Ask</button>
+  <button type="submit" id="ask-btn">Ask</button>
 </form>
+
+<script>
+  // answer back instantly: the LLM call can take seconds, so confirm the
+  // click right away instead of leaving a dead-looking button behind
+  document.getElementById("ask-form").addEventListener("submit", function () {
+    var btn = document.getElementById("ask-btn");
+    btn.disabled = true;
+    btn.textContent = "Asking…";
+  });
+</script>
 
 {% if answer %}
 <section class="answer">
