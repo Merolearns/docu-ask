@@ -3,6 +3,7 @@
 import os
 
 import pytest
+from sklearn.feature_extraction.text import TfidfVectorizer
 
 from rag import RAGIndex, chunk_text, load_documents
 from answer import answer_question, extractive_answer
@@ -133,3 +134,71 @@ def test_answer_no_llm_flag(index):
     text, used_llm = answer_question("how do I reset?", hits, allow_llm=False)
     assert used_llm is False
     assert text  # still got an answer
+
+
+def test_retrieve_during_rebuild_uses_old_index(monkeypatch):
+    # an ask landing mid-rebuild must see the complete old index, never
+    # the half-built one - build() used to swap in a fresh unfitted
+    # vectorizer before fit_transform ran, so retrieve() raised
+    # NotFittedError and the ask 500ed
+    idx = RAGIndex()
+    idx.build([("a.md", "the widget factory reset button is behind the battery cover")])
+    assert idx.retrieve("factory reset widget")
+
+    seen = {}
+    orig_fit = TfidfVectorizer.fit_transform
+
+    def fit_and_ask(self, raw_documents, y=None):
+        # exactly what a concurrent ask sees: the new chunks are in and
+        # the new vectorizer exists, but fit hasn't run yet. Record the
+        # outcome instead of letting it escape - on the old code the
+        # NotFittedError would be swallowed by build()'s ValueError
+        # handler (NotFittedError subclasses ValueError) and the build
+        # would silently finish as an empty index.
+        try:
+            seen["hits"] = idx.retrieve("factory reset widget")
+        except Exception as e:  # noqa: BLE001 - the error IS the signal
+            seen["error"] = e
+        return orig_fit(self, raw_documents, y)
+
+    monkeypatch.setattr(TfidfVectorizer, "fit_transform", fit_and_ask)
+    idx.build([("b.md", "lisbon travel guide best time to visit the city in spring")])
+    assert "error" not in seen, seen["error"]
+    assert seen["hits"], "expected the old index's hits mid-rebuild"
+    assert seen["hits"][0]["doc_name"] == "a.md"
+    # and the new index took over once the build finished
+    hits = idx.retrieve("lisbon travel spring", k=3)
+    assert hits and hits[0]["doc_name"] == "b.md"
+
+
+def test_concurrent_rebuild_and_retrieve_never_raises():
+    # rebuilds and retrieves racing each other must never surface a
+    # half-built index; bigger docs widen the fit window so the race
+    # actually gets exercised
+    import threading
+
+    idx = RAGIndex()
+    big_a = " ".join(["widget factory reset button battery cover"] * 400)
+    big_b = " ".join(["lisbon travel guide visit city spring"] * 400)
+    docs_a = [("a.md", big_a)]
+    docs_b = [("b.md", big_b)]
+    idx.build(docs_a)
+    errors = []
+    stop = threading.Event()
+
+    def retriever():
+        while not stop.is_set():
+            try:
+                idx.retrieve("factory reset widget")
+            except Exception as e:  # noqa: BLE001 - any error is a failure
+                errors.append(e)
+
+    t = threading.Thread(target=retriever)
+    t.start()
+    try:
+        for i in range(20):
+            idx.build(docs_a if i % 2 == 0 else docs_b)
+    finally:
+        stop.set()
+        t.join()
+    assert not errors, errors[:3]

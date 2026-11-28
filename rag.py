@@ -62,30 +62,60 @@ class RAGIndex:
     def __init__(self, chunk_words=150, overlap=30):
         self.chunk_words = chunk_words
         self.overlap = overlap
-        self.chunks = []
-        self.vectorizer = None
-        self.matrix = None
+        # one tuple, swapped in a single assignment: a retrieve() that
+        # lands mid-build sees the whole old index or the whole new one,
+        # never new chunks with an unfitted vectorizer
+        self._state = ([], None, None)
+
+    @property
+    def chunks(self):
+        return self._state[0]
+
+    @chunks.setter
+    def chunks(self, value):
+        _, vectorizer, matrix = self._state
+        self._state = (value, vectorizer, matrix)
+
+    @property
+    def vectorizer(self):
+        return self._state[1]
+
+    @vectorizer.setter
+    def vectorizer(self, value):
+        chunks, _, matrix = self._state
+        self._state = (chunks, value, matrix)
+
+    @property
+    def matrix(self):
+        return self._state[2]
+
+    @matrix.setter
+    def matrix(self, value):
+        chunks, vectorizer, _ = self._state
+        self._state = (chunks, vectorizer, value)
 
     def build(self, documents):
         """Build the index. documents: list of (doc_name, text)."""
-        self.chunks = []
+        chunks = []
         for doc_name, text in documents:
-            self.chunks.extend(
+            chunks.extend(
                 chunk_text(text, doc_name, self.chunk_words, self.overlap)
             )
-        if not self.chunks:
-            self.vectorizer, self.matrix = None, None
+        if not chunks:
+            self._state = ([], None, None)
             return
         # max_features keeps the matrix small on bigger doc sets
-        self.vectorizer = TfidfVectorizer(stop_words="english", max_features=20000)
+        vectorizer = TfidfVectorizer(stop_words="english", max_features=20000)
         try:
-            self.matrix = self.vectorizer.fit_transform(c["text"] for c in self.chunks)
+            matrix = vectorizer.fit_transform(c["text"] for c in chunks)
         except ValueError:
             # every chunk is stop words only ("the and of the") - the
             # vectorizer has no vocabulary to build. An empty index
             # instead of a crash: the app still boots and uploads stop
             # 500ing, and the doc simply never matches a query.
-            self.vectorizer, self.matrix = None, None
+            self._state = ([], None, None)
+            return
+        self._state = (chunks, vectorizer, matrix)
 
     def retrieve(self, query, k=5):
         """Top-k chunks for query, highest cosine score first.
@@ -94,18 +124,21 @@ class RAGIndex:
         A non-positive k returns no hits instead of slicing backwards
         (argsort()[::-1][:-1] would silently return almost everything).
         """
-        if not self.chunks or self.vectorizer is None:
+        # unpack once: the three locals always belong to the same build,
+        # even if another thread swaps in a fresh index mid-retrieve
+        chunks, vectorizer, matrix = self._state
+        if not chunks or vectorizer is None:
             return []
         if k <= 0:
             return []
-        q_vec = self.vectorizer.transform([query])
-        scores = cosine_similarity(q_vec, self.matrix)[0]
+        q_vec = vectorizer.transform([query])
+        scores = cosine_similarity(q_vec, matrix)[0]
         order = scores.argsort()[::-1][:k]
         hits = []
         for i in order:
             if scores[i] <= 0:
                 continue
-            c = self.chunks[int(i)]
+            c = chunks[int(i)]
             hits.append({
                 "doc_name": c["doc_name"],
                 "chunk_id": c["chunk_id"],
